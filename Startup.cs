@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
@@ -12,6 +14,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Tokens;
 using WebApplication2.Model;
 
 namespace WebApplication2
@@ -30,6 +33,47 @@ namespace WebApplication2
         {
             services.AddDbContext<RequestDbContext>(op => op.UseSqlServer(Configuration.GetConnectionString("Database"))); //Add   
             services.AddIdentity<IdentityUser, IdentityRole>().AddEntityFrameworkStores<RequestDbContext>();
+            var jwtSection = Configuration.GetSection("JWTSettings");
+            services.Configure<JWTSettings>(jwtSection);
+            var appSettings = jwtSection.Get<JWTSettings>();
+            var key = Encoding.ASCII.GetBytes(appSettings.SecretKey);
+            services.AddAuthentication(x =>
+
+            {
+
+                x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+
+                x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+
+            })
+
+            .AddJwtBearer(x =>
+
+            {
+
+                x.RequireHttpsMetadata = true;
+
+                x.SaveToken = true;
+
+                x.TokenValidationParameters = new TokenValidationParameters
+
+                {
+
+                    ValidateIssuerSigningKey = true,
+                    ValidateLifetime=true,
+                    IssuerSigningKey = new SymmetricSecurityKey(key),
+
+                    ValidateIssuer = false,
+
+                    ValidateAudience = false,
+
+                    ClockSkew = TimeSpan.Zero
+
+                };
+
+            });
+
+
             services.AddControllers().AddNewtonsoftJson(options =>
     options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore);
         }
@@ -44,9 +88,9 @@ namespace WebApplication2
 
             app.UseHttpsRedirection();
 
-            app.UseAuthentication();
-
             app.UseRouting();
+
+            app.UseAuthentication();
 
             app.UseAuthorization();
 

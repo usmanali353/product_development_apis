@@ -1,8 +1,12 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 using System;
 using System.Collections.Generic;
+using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
+using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 using WebApplication2.Model;
@@ -15,11 +19,13 @@ namespace WebApplication2.Controllers
     {
         private readonly UserManager<IdentityUser> userManager;
         private readonly SignInManager<IdentityUser> signInManager;
+        private readonly JWTSettings _jwtSetting;
         StringBuilder sb=new StringBuilder();
-        public UsersController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager)
+        public UsersController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager,IOptions<JWTSettings> jwtSetting)
         {
             this.userManager = userManager;
             this.signInManager = signInManager;
+            _jwtSetting = jwtSetting.Value;
         }
 
         [HttpPost,Route("[action]")]
@@ -70,7 +76,7 @@ namespace WebApplication2.Controllers
                         new
                         {
                             message = "Login Sucessful",
-
+                            token= GenerateAccessToken(user.Email)
                         }
 
                         );
@@ -88,6 +94,40 @@ namespace WebApplication2.Controllers
 
             }
             return BadRequest();
+        }
+        private string GenerateAccessToken(string userId)
+
+        {
+
+            var tokenHandler = new JwtSecurityTokenHandler();
+
+            var key = Encoding.ASCII.GetBytes(_jwtSetting.SecretKey);
+
+            var tokenDescriptor = new SecurityTokenDescriptor
+
+            {
+
+                Subject = new ClaimsIdentity(new Claim[]
+
+                {
+
+                    new Claim(ClaimTypes.Email, userId),
+                    new Claim(ClaimTypes.Role, "Administrator")
+
+                }),
+
+                Expires = DateTime.UtcNow.AddMinutes(1),
+
+                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key),
+
+                SecurityAlgorithms.HmacSha256Signature)
+
+            };
+
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+
+            return tokenHandler.WriteToken(token);
+
         }
     }
 }
