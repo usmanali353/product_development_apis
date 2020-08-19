@@ -15,6 +15,6 @@ namespace WebApplication2.Model
         [InverseProperty(nameof(Designers.designersInvolved))]
         public virtual Designers designer { get; set; }
 
-        public List<DesignersInvolved> designersInvolved { get; set; }
+       // public List<DesignersInvolved> designersInvolved { get; set; }
     }
 }
